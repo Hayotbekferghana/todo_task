@@ -2,22 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:todo_task/blocs/event_add/event_add_bloc.dart';
+import 'package:todo_task/data/models/event_model.dart';
+import 'package:todo_task/presentations/events/events_screen.dart';
 import 'package:todo_task/presentations/global_widgets/color_dropdown/color_dropdown.dart';
 import 'package:todo_task/presentations/global_widgets/custom_button.dart';
 import 'package:todo_task/presentations/global_widgets/date_button.dart';
 import 'package:todo_task/presentations/global_widgets/description_text_field.dart';
 import 'package:todo_task/presentations/global_widgets/title_text_field.dart';
 import 'package:todo_task/utils/colors.dart';
+
 import 'package:todo_task/utils/time_utils.dart';
 
-class EventAddScreen extends StatelessWidget {
-  const EventAddScreen({super.key});
-  static Route<void> route() {
+class EventEditScreen extends StatelessWidget {
+  const EventEditScreen({super.key});
+
+  static Route<void> route(Event event) {
     return MaterialPageRoute(
       fullscreenDialog: true,
       builder: (context) => BlocProvider(
-        create: (context) => EventAddBloc(),
-        child: const EventAddScreen(),
+        create: (context) => EventAddBloc(event: event),
+        child: const EventEditScreen(),
       ),
     );
   }
@@ -25,15 +29,16 @@ class EventAddScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocListener<EventAddBloc, EventAddState>(
-      listenWhen: (previous, current) => current.status == AddingStatus.added,
-      listener: (context, state) => Navigator.of(context).pop(),
-      child: const EventAddView(),
+      listenWhen: (previous, current) => current.status == AddingStatus.edited,
+      listener: (context, state) =>
+          Navigator.pushReplacement(context, EventsScreen.route()),
+      child: const EventEditView(),
     );
   }
 }
 
-class EventAddView extends StatelessWidget {
-  const EventAddView({super.key});
+class EventEditView extends StatelessWidget {
+  const EventEditView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +68,9 @@ class _TitleTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final name = context.select((EventAddBloc bloc) => bloc.state.name);
     return TitleTextField(
+      initialValue: name,
       onChanged: (value) {
         context.read<EventAddBloc>().add(EventNameChanged(name: value));
       },
@@ -76,7 +83,11 @@ class _DescriptionTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final description =
+        context.select((EventAddBloc bloc) => bloc.state.description);
+
     return DescriptionTextField(
+      initialValue: description,
       onChanged: (value) {
         context
             .read<EventAddBloc>()
@@ -91,7 +102,10 @@ class _LocationTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final location = context.select((EventAddBloc bloc) => bloc.state.location);
+
     return TitleTextField(
+      initialValue: location,
       isTitle: false,
       onChanged: (value) {
         context
@@ -125,7 +139,7 @@ class _SelectDateTime extends StatelessWidget {
     final date =
         context.select((EventAddBloc bloc) => bloc.state.dateForScreen);
     return SelectDateTimeButton(
-      selectedDate: date,
+      selectedDate: formatDate(date!),
       onPressed: () async {
         await DateTimeUtils.getDateTime(context: context).then((value) {
           context.read<EventAddBloc>().add(
@@ -155,14 +169,12 @@ class _SubmitButton extends StatelessWidget {
       color: state.isComplete
           ? AppColors.primaryColor
           : AppColors.primaryColor.withOpacity(0.3),
-      buttonText: "Add",
-      onPressed: !state.isComplete
-          ? null
-          : () {
-              context
-                  .read<EventAddBloc>()
-                  .add(EventSubmitted(context: context,isEdited: false));
-            },
+      buttonText: "Edit",
+      onPressed: () {
+        context
+            .read<EventAddBloc>()
+            .add(EventSubmitted(context: context, isEdited: true));
+      },
     );
   }
 }
